@@ -1,0 +1,16 @@
+version: '2'
+services:
+    jenkins_getf_devops:
+      build: .
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: jenkins_getf_devops
+      ports:
+        - 80:8080
+      mem_limit: 2147483648
+      volumes:
+        - jenkins_home:/var/jenkins_home
+
+volumes:
+    jenkins_home:
