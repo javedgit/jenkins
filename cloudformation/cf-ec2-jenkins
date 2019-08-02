@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS CloudFormation Sample Template EC2InstanceWithSecurityGroupSample: Create
+  an Amazon EC2 instance running the Amazon Linux AMI. The AMI is chosen based
+  on the region in which the stack is run. This example creates an EC2 security
+  group for the instance to give you SSH access. **WARNING** This template
+  creates an Amazon EC2 instance. You will be billed for the AWS resources used
+  if you create a stack from this template.
+Parameters:
+  PrivateSubnet:
+    Description: Private Subnet to Attach NAT Gateway.
+    Type: AWS::EC2::Subnet::Id
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.large
+    AllowedValues: [t2.micro, t2.small, t2.medium, t2.large, m3.medium, m3.large,
+      m3.xlarge, m3.2xlarge, m4.large, m4.xlarge, m4.2xlarge, m4.4xlarge, m4.10xlarge,
+      c4.large, c4.xlarge, c4.2xlarge, c4.4xlarge, c4.8xlarge, c3.large, c3.xlarge,
+      c3.2xlarge, c3.4xlarge, c3.8xlarge, r3.large, r3.xlarge, r3.2xlarge, r3.4xlarge,
+      r3.8xlarge, i2.xlarge, i2.2xlarge, i2.4xlarge, i2.8xlarge]
+    ConstraintDescription: Please choose a valid instance type.
+
+  SSHKeyName:
+    Description: SSH Key Name
+    Type: String
+    ConstraintDescription: Please choose a valid KeyName
+    Default: 'UpdateWithSSHKeyName'
+  
+  
+  SecurityGroupName:
+    Description: Security Group Name
+    Type: String
+    ConstraintDescription: Please specify Security Group Name
+    Default: 'UpdateWithSecurityGroup_sg_'
+    
+  VolumeSize:
+    Description: size of volume
+    Type: Number
+    Default: 50
+    ConstraintDescription: Please choose a valid Number
+    AllowedValues: [20,30, 40, 50 , 60 , 100]
+
+
+
+  ImageId:
+    Type: String
+    Description: 'If you using other version please choose right'
+    Default: 'ami-0b898040803850657'
+    
+Resources:
+  JenkinsServer:
+    Type: "AWS::EC2::Instance"
+
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      ImageId: !Ref ImageId
+      UserData: 
+        Fn::Base64: 
+          !Sub |
+            #!/bin/bash -xe
+            
+            sudo yum install -y docker
+            sudo mkdir /var/jenkins_home
+            sudo chown 1000:1000 /var/jenkins_home
+            sudo usermod -a -G docker ec2-user
+            sudo service docker start
+            docker run -t -d -v /var/jenkins_home:/var/jenkins_home:z -p 80:8080 --name my-jenkins --restart=always denny/jenkins_image:latest
+            sudo curl -L https://github.com/docker/compose/releases/download/1.24.1/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+
+      Tags:
+        - 
+         Key: Name
+         Value: !Sub '${AWS::StackName}-JenkinsServer'
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref SSHKeyName
+      SecurityGroupIds:
+        - !Ref SecurityGroupName
+      BlockDeviceMappings:
+        -
+          DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp2
+            DeleteOnTermination: true
+            Encrypted: true
+            VolumeSize: !Ref VolumeSize
+            
+Outputs:
+  JenkinsServer:
+    Description: 'Ec2 instance JenkinsServer'
+    Value: !Ref JenkinsServer
+    Export:
+      Name: !Sub '${AWS::StackName}-JenkinsServer'
