@@ -27,14 +27,14 @@ Parameters:
     Type: String
     ConstraintDescription: Please choose a valid KeyName
     Default: 'UpdateWithSSHKeyName'
-  
-  
+
+
   SecurityGroupName:
     Description: Security Group Name
     Type: String
     ConstraintDescription: Please specify Security Group Name
     Default: 'UpdateWithSecurityGroup_sg_'
-    
+
   VolumeSize:
     Description: size of volume
     Type: Number
@@ -48,7 +48,7 @@ Parameters:
     Type: String
     Description: 'If you using other version please choose right'
     Default: 'ami-0b898040803850657'
-    
+
 Resources:
   JenkinsServer:
     Type: "AWS::EC2::Instance"
@@ -56,22 +56,24 @@ Resources:
     Properties:
       SubnetId: !Ref PrivateSubnet
       ImageId: !Ref ImageId
-      UserData: 
-        Fn::Base64: 
+      UserData:
+        Fn::Base64:
           !Sub |
             #!/bin/bash -xe
-            
+
             sudo yum install -y docker
+            sudo yum install -y git
             sudo mkdir /var/jenkins_home
             sudo chown 1000:1000 /var/jenkins_home
             sudo usermod -a -G docker ec2-user
             sudo service docker start
-            docker run -t -d -v /var/jenkins_home:/var/jenkins_home:z -p 80:8080 --name my-jenkins --restart=always denny/jenkins_image:latest
             sudo curl -L https://github.com/docker/compose/releases/download/1.24.1/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
+            git clone https://github.com/javedgit/jenkins.git
+            docker-compose -f ./jenkins/docker-compose-jenkins.yml up -d
 
       Tags:
-        - 
+        -
          Key: Name
          Value: !Sub '${AWS::StackName}-JenkinsServer'
       InstanceType: !Ref InstanceType
@@ -86,7 +88,7 @@ Resources:
             DeleteOnTermination: true
             Encrypted: true
             VolumeSize: !Ref VolumeSize
-            
+
 Outputs:
   JenkinsServer:
     Description: 'Ec2 instance JenkinsServer'
